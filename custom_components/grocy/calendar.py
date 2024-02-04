@@ -16,9 +16,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.util.dt import DEFAULT_TIME_ZONE
+from homeassistant.util.dt import DEFAULT_TIME_ZONE, now
 
-from .const import ATTR_BATTERIES, DOMAIN
+from .const import ATTR_BATTERIES, ATTR_CHORES, ATTR_MEAL_PLAN, ATTR_TASKS, DOMAIN
 from .coordinator import GrocyCoordinatorData, GrocyDataUpdateCoordinator
 from .entity import GrocyEntity
 from .helpers import MealPlanItemWrapper
@@ -64,24 +64,24 @@ CALENDARS: tuple[GrocyCalendarEntityDescription, ...] = (
         icon="mdi:battery",
         exists_fn=lambda entities: ATTR_BATTERIES in entities,
     ),
-    # GrocyCalendarEntityDescription(
-    #     key=ATTR_CHORES,
-    #     name="Grocy chores",
-    #     icon="mdi:broom",
-    #     exists_fn=lambda entities: ATTR_CHORES in entities,
-    # ),
-    # GrocyCalendarEntityDescription(
-    #     key=ATTR_MEAL_PLAN,
-    #     name="Grocy meal plan",
-    #     icon="mdi:silverware-variant",
-    #     exists_fn=lambda entities: ATTR_MEAL_PLAN in entities,
-    # ),
-    # GrocyCalendarEntityDescription(
-    #     key=ATTR_TASKS,
-    #     name="Grocy tasks",
-    #     icon="mdi:checkbox-marked-circle-outline",
-    #     exists_fn=lambda entities: ATTR_TASKS in entities,
-    # ),
+    GrocyCalendarEntityDescription(
+        key=ATTR_CHORES,
+        name="Grocy chores",
+        icon="mdi:broom",
+        exists_fn=lambda entities: ATTR_CHORES in entities,
+    ),
+    GrocyCalendarEntityDescription(
+        key=ATTR_MEAL_PLAN,
+        name="Grocy meal plan",
+        icon="mdi:silverware-variant",
+        exists_fn=lambda entities: ATTR_MEAL_PLAN in entities,
+    ),
+    GrocyCalendarEntityDescription(
+        key=ATTR_TASKS,
+        name="Grocy tasks",
+        icon="mdi:checkbox-marked-circle-outline",
+        exists_fn=lambda entities: ATTR_TASKS in entities,
+    ),
 )
 
 
@@ -92,7 +92,11 @@ class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
         key: str = "",
     ) -> None:
         if isinstance(item, Chore):
-            end = item.next_estimated_execution_time.replace(tzinfo=DEFAULT_TIME_ZONE)
+            end = (
+                item.next_estimated_execution_time.replace(tzinfo=DEFAULT_TIME_ZONE)
+                if item.next_estimated_execution_time
+                else now()
+            )
             # Chores have a due time, but no start time, designate an hour before start time
             start = end - datetime.timedelta(hours=1)
             super().__init__(
@@ -106,7 +110,11 @@ class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
                 rrule=None,
             )
         elif isinstance(item, Battery):
-            end = item.next_estimated_charge_time.replace(tzinfo=DEFAULT_TIME_ZONE)
+            end = (
+                item.next_estimated_charge_time.replace(tzinfo=DEFAULT_TIME_ZONE)
+                if item.next_estimated_charge_time
+                else now()
+            )
             # Batteries have a due time, but no start time, designate an hour before start time
             start = end - datetime.timedelta(hours=1)
             super().__init__(
@@ -120,9 +128,9 @@ class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
                 rrule=None,
             )
         elif isinstance(item, MealPlanItemWrapper):
-            end = item.meal_plan.day  # .astimezone(tz=DEFAULT_TIME_ZONE)
+            start = item.meal_plan.day if item.meal_plan.day else now().date()
             # Meal Plans have a due time, but no start time, designate an hour before start time
-            start = end - datetime.timedelta(hours=1)
+            end: datetime.date = start + datetime.timedelta(days=1)
             super().__init__(
                 uid=item.meal_plan.id.__str__(),
                 summary=item.meal_plan.recipe.name,
@@ -134,10 +142,10 @@ class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
                 rrule=None,
             )
         elif isinstance(item, Task):
-            end = item.due_date
+            start = item.due_date if item.due_date else now().date()
             # end.tzinfo = datetime.UTC
             # Tasks have a due time, but no start time, designate an hour before start time
-            start = end - datetime.timedelta(hours=1)
+            end = start + datetime.timedelta(days=1)
             super().__init__(
                 uid=item.id.__str__(),
                 summary=item.name,
