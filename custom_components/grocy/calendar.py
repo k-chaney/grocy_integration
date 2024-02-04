@@ -9,6 +9,7 @@ from typing import Any
 
 from pygrocy.data_models.battery import Battery
 from pygrocy.data_models.chore import Chore
+from pygrocy.data_models.product import Product
 from pygrocy.data_models.task import Task
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -18,7 +19,14 @@ from homeassistant.helpers.entity import EntityDescription
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util.dt import DEFAULT_TIME_ZONE, now
 
-from .const import ATTR_BATTERIES, ATTR_CHORES, ATTR_MEAL_PLAN, ATTR_TASKS, DOMAIN
+from .const import (
+    ATTR_BATTERIES,
+    ATTR_CHORES,
+    ATTR_EXPIRING_PRODUCTS,
+    ATTR_MEAL_PLAN,
+    ATTR_TASKS,
+    DOMAIN,
+)
 from .coordinator import GrocyCoordinatorData, GrocyDataUpdateCoordinator
 from .entity import GrocyEntity
 from .helpers import MealPlanItemWrapper
@@ -71,6 +79,12 @@ CALENDARS: tuple[GrocyCalendarEntityDescription, ...] = (
         exists_fn=lambda entities: ATTR_CHORES in entities,
     ),
     GrocyCalendarEntityDescription(
+        key=ATTR_EXPIRING_PRODUCTS,
+        name="Grocy expiring products",
+        icon="mdi:clock-fast",
+        exists_fn=lambda entities: ATTR_EXPIRING_PRODUCTS in entities,
+    ),
+    GrocyCalendarEntityDescription(
         key=ATTR_MEAL_PLAN,
         name="Grocy meal plan",
         icon="mdi:silverware-variant",
@@ -88,7 +102,7 @@ CALENDARS: tuple[GrocyCalendarEntityDescription, ...] = (
 class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
     def __init__(  # noqa: D107
         self,
-        item: Chore | Battery | MealPlanItemWrapper | Task | None = None,
+        item: Chore | Battery | MealPlanItemWrapper | Product | Task | None = None,
         key: str = "",
     ) -> None:
         if isinstance(item, Chore):
@@ -137,6 +151,20 @@ class GrocyCalendarEvent(CalendarEvent):  # noqa: D101
                 start=start,
                 end=end,
                 description=item.meal_plan.recipe.description or None,
+                location=None,
+                recurrence_id=None,
+                rrule=None,
+            )
+        elif isinstance(item, Product):
+            start = item.best_before_date if item.best_before_date else now().date()
+            # Meal Plans have a due time, but no start time, designate an hour before start time
+            end: datetime.date = start + datetime.timedelta(days=1)
+            super().__init__(
+                uid=item.id.__str__(),
+                summary=item.name,
+                start=start,
+                end=end,
+                description=None,
                 location=None,
                 recurrence_id=None,
                 rrule=None,
