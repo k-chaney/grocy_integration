@@ -2,7 +2,7 @@
 from collections import OrderedDict
 import logging
 
-from pygrocy import Grocy
+from pygrocy2.grocy import Grocy
 import voluptuous as vol
 
 from homeassistant import config_entries

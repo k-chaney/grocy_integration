@@ -1,7 +1,7 @@
 """Grocy services."""
 from __future__ import annotations
 
-from pygrocy import EntityType, TransactionType
+from pygrocy2.grocy import EntityType, TransactionType
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry

@@ -7,10 +7,10 @@ import datetime
 import logging
 from typing import Any
 
-from pygrocy.data_models.battery import Battery
-from pygrocy.data_models.chore import Chore
-from pygrocy.data_models.product import Product
-from pygrocy.data_models.task import Task
+from pygrocy2.data_models.battery import Battery
+from pygrocy2.data_models.chore import Chore
+from pygrocy2.data_models.product import Product
+from pygrocy2.data_models.task import Task
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry

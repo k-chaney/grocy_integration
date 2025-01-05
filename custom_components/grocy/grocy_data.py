@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 import logging
 
 from aiohttp import hdrs, web
-from pygrocy import Grocy
-from pygrocy.data_models.battery import Battery
-from pygrocy.data_models.chore import Chore
+from pygrocy2.grocy import Grocy
+from pygrocy2.data_models.battery import Battery
+from pygrocy2.data_models.chore import Chore
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.config_entries import ConfigEntry
